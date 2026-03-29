@@ -4,6 +4,7 @@ import os
 from firecrawl import Firecrawl
 import json
 import datetime
+import resend
 
 dotenv_path = find_dotenv()
 
@@ -11,6 +12,7 @@ load_dotenv(dotenv_path)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
+resend.api_key = os.getenv("RESEND_API_KEY")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 fc = Firecrawl(api_key=FIRECRAWL_API_KEY)
@@ -70,6 +72,52 @@ def run_scout():
 
     newsletter_draft = response.text
     print(newsletter_draft)
+    return newsletter_draft
+
+def send_newsletter_email(newsletter_markdown):
+     """
+
+     Sends the drafted newsletter as clean HTML email.
+     """
+
+     html_body = f"""
+     <html>
+     <body style="font-family: sans-serif;line-height:1.6;color:#333;max-width:600px;margin:auto;">
+     <h2 style="color:#007bff;">Your AI Tech Scout Update</h2>
+     <p style="color:#666;">Generated on {datetime.datetime.now().strftime("%B %d, %Y, %I:%M %p")}</p>
+     <hr style="border:0;border-top:1px solid #eee;"/>
+     <div style="white-space:pre-wrap;">
+     {newsletter_markdown}
+     </div>
+     <footer style="margin-top:20px;font-size:12px;color:#999;">
+     Sent by your AI Agent
+     </footer>
+     </body>
+     </html>
+     """
+
+     try:
+          params = {
+               "from":"onboarding@resend.dev",
+               "to":[os.getenv("MY_EMAIL")],
+               "subject":f"AI Newsletter: {len(newsletter_markdown.splitlines())}",
+               "html":html_body
+          }
+
+          email = resend.Emails.send(params)
+          print(f"Email sent successfully. ID:{email['id']}")
+          return True
+     except Exception as e:
+          print(f"Failed to send Email. {e}")
+          return False
 
 if __name__ == "__main__":
-     run_scout()
+     raw_content = run_scout()
+     prompt = f"Create a professional newsletter from this content: {raw_content}"
+
+     newsletter_text = client.models.generate_content(
+          model="gemini-2.5-flash",
+          contents=prompt
+     ).text
+
+     send_newsletter_email(newsletter_text)
