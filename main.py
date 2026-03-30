@@ -113,8 +113,27 @@ def send_newsletter_email(newsletter_markdown):
 
 if __name__ == "__main__":
      raw_content = run_scout()
-     prompt = f"Create a professional newsletter from this content: {raw_content}"
+     #prompt = f"Create a professional newsletter from this content: {raw_content}"
 
+     prompt = f"""
+     You are a Newsletter Formatting Agent.
+     I will provide you a list of verified tech updates.
+
+     INPUT_DATA:
+     {raw_content}
+
+     STRICT_RULES:
+     1. You MUST include every single 'Direct Link' provided in the input.
+     2. Do Not use placeholder text like '[Read More]'.
+     3. Use the exact URL as the hyperlink or place it immediately after the title.
+     4. Keep the 'Why it Matters' insight for each item.
+     5. Format the output in clean HTML or Markdown that is easy to read in an email.
+
+     STRUCTURE:
+     - Use H2 for Site names (e.g., Android Developers Blog).
+     - Use H3 for Article Titles.
+     - Include the URL as clickable link.
+     """
      newsletter_text = client.models.generate_content(
           model="gemini-2.5-flash",
           contents=prompt
